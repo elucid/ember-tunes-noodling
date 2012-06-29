@@ -8,56 +8,81 @@
   <head>
     <meta charset="utf-8">
 
-    <title>Backbone Tunes</title>
+    <title>Ember Tunes</title>
     <meta name="author" content="David Goodlad <david@goodlad.ca>">
+    <meta name="author" content="Justin Giancola <justin.giancola@gmail.com>">
 
     <link rel="stylesheet" href="style/screen.css" media="screen, projection">
     <link rel="stylesheet" href="style/fancypants.css" media="screen, projection">
 
-    <script src="js/vendor/modernizr-1.6.min.js"></script>
-    <script src="js/vendor/jquery-1.5.1.min.js"></script>
-    <script src="js/vendor/underscore.js"></script>
-    <script src="js/vendor/backbone.js"></script>
-    <script src="js/Tunes.js"></script>
+    <script src="js/vendor/jquery-1.7.2.min.js"></script>
+    <script src="js/vendor/handlebars-1.0.0.beta.6.js"></script>
+    <script src="js/vendor/ember-1.0.pre.js"></script>
+    <script src="js/tunes.js"></script>
 
-    <script type="text/template" id="library-template">
-      <h1>Music Library</h1>
-      <ul class="albums"></ul>
-    </script>
-
-    <script type="text/template" id="playlist-template">
-      <h1>Playlist</h1>
+    <script type="text/x-handlebars" data-template-name="navbar">
       <nav>
-        <button class="control play">Play</button>
-        <button class="control pause">Pause</button>
-        <button class="control prev">Prev</button>
-        <button class="control next">Next</button>
+        {{#unless isPlaying}}
+          <button class="control play" {{action play}}>Play</button>
+        {{else}}
+          <button class="control pause" {{action pause}}>Pause</button>
+        {{/unless}}
+        <button class="control prev" {{action prev}}>Prev</button>
+        <button class="control next" {{action next}}>Next</button>
       </nav>
-      <ul class="albums">
-      </ul>
     </script>
 
-    <script type="text/template" id="album-template">
-      <button class="queue add"><img src="/images/add.png"></button>
-      <button class="queue remove"><img src="/images/remove.png"></button>
-      <span class="album-title"><%= title %></span>&nbsp;&nbsp;
-      <span class="artist-name"><%= artist %></span>
+    <script type="text/x-handlebars" data-template-name="playlist">
+      <div class="playlist">
+        <h1>Playlist</h1>
+        {{view Tunes.NavbarView}}
+        <ul class="albums">
+          {{#each album in controller}}
+            {{view Tunes.AlbumView albumBinding="album"}}
+          {{/each}}
+        </ul>
+      </div>
+    </script>
+
+    <script type="text/x-handlebars" data-template-name="album">
+      <button class="queue add" {{action queueAlbum album}}>
+        <img src="/images/add.png">
+      </button>
+      <button class="queue remove" {{action dequeueAlbum album}}><img src="/images/remove.png"></button>
+      <span class="album-title">{{album.title}}</span>&nbsp;&nbsp;
+      <span class="artist-name">{{album.artist}}</span>
+      {{view Tunes.TracksView}}
+    </script>
+
+    <script type="text/x-handlebars" data-template-name="tracks">
       <ol class="tracks">
-        <% _.each(tracks, function(track) { %>
-          <li><%= track.title %></li>
-        <% }); %>
+        {{#each track in album.tracks}}
+          {{view Tunes.TrackView trackBinding="track"}}
+        {{/each}}
       </ol>
     </script>
 
-    <script type="application/javascript">
-      jQuery(function() {
-        window.library.fetch();
-      });
+    <script type="text/x-handlebars" data-template-name="track">
+      {{track.title}}
+    </script>
+
+    <script type="text/x-handlebars" data-template-name="library">
+      <section class="library">
+        <h1>Music Library</h1>
+        <ul class="albums">
+          {{#each album in controller}}
+            {{view Tunes.AlbumView}}
+          {{/each}}
+        </ul>
+      </section>
+    </script>
+
+    <script type="text/x-handlebars" data-template-name="application">
+      {{outlet playlist}}
+      {{outlet library}}
     </script>
   </head>
 
   <body>
-    <div id="container">
-    </div>
   </body>
 </html>
