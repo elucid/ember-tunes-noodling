@@ -12,75 +12,9 @@
     <meta name="author" content="David Goodlad <david@goodlad.ca>">
     <meta name="author" content="Justin Giancola <justin.giancola@gmail.com>">
 
-    <link rel="stylesheet" href="style/screen.css" media="screen, projection">
-    <link rel="stylesheet" href="style/fancypants.css" media="screen, projection">
+    <link rel="stylesheet" href="assets/application.css" media="screen, projection">
 
-    <script src="js/vendor/jquery-1.7.2.min.js"></script>
-    <script src="js/vendor/handlebars-1.0.0.beta.6.js"></script>
-    <script src="js/vendor/ember-1.0.pre.js"></script>
-    <script src="js/tunes.js"></script>
-
-    <script type="text/x-handlebars" data-template-name="navbar">
-      <nav>
-        {{#unless isPlaying}}
-          <button class="control play" {{action play}}>Play</button>
-        {{else}}
-          <button class="control pause" {{action pause}}>Pause</button>
-        {{/unless}}
-        <button class="control prev" {{action prev}}>Prev</button>
-        <button class="control next" {{action next}}>Next</button>
-      </nav>
-    </script>
-
-    <script type="text/x-handlebars" data-template-name="playlist">
-      <div class="playlist">
-        <h1>Playlist</h1>
-        {{view Tunes.NavbarView}}
-        <ul class="albums">
-          {{#each album in controller}}
-            {{view Tunes.AlbumView albumBinding="album"}}
-          {{/each}}
-        </ul>
-      </div>
-    </script>
-
-    <script type="text/x-handlebars" data-template-name="album">
-      <button class="queue add" {{action queueAlbum album}}>
-        <img src="/images/add.png">
-      </button>
-      <button class="queue remove" {{action dequeueAlbum album}}><img src="/images/remove.png"></button>
-      <span class="album-title">{{album.title}}</span>&nbsp;&nbsp;
-      <span class="artist-name">{{album.artist}}</span>
-      {{view Tunes.TracksView}}
-    </script>
-
-    <script type="text/x-handlebars" data-template-name="tracks">
-      <ol class="tracks">
-        {{#each track in album.tracks}}
-          {{view Tunes.TrackView trackBinding="track"}}
-        {{/each}}
-      </ol>
-    </script>
-
-    <script type="text/x-handlebars" data-template-name="track">
-      {{track.title}}
-    </script>
-
-    <script type="text/x-handlebars" data-template-name="library">
-      <section class="library">
-        <h1>Music Library</h1>
-        <ul class="albums">
-          {{#each album in controller}}
-            {{view Tunes.AlbumView}}
-          {{/each}}
-        </ul>
-      </section>
-    </script>
-
-    <script type="text/x-handlebars" data-template-name="application">
-      {{outlet playlist}}
-      {{outlet library}}
-    </script>
+    <script src="assets/application.js"></script>
   </head>
 
   <body>

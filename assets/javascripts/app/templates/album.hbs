@@ -1,0 +1,7 @@
+<button class="queue add" {{action queueAlbum album}}>
+  <img src="/images/add.png">
+</button>
+<button class="queue remove" {{action dequeueAlbum album}}><img src="/images/remove.png"></button>
+<span class="album-title">{{album.title}}</span>&nbsp;&nbsp;
+<span class="artist-name">{{album.artist}}</span>
+{{view Tunes.TracksView}}
