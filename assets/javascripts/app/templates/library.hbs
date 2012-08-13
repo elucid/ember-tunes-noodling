@@ -1,0 +1,8 @@
+<section class="library">
+  <h1>Music Library</h1>
+  <ul class="albums">
+    {{#each album in controller}}
+      {{view Tunes.AlbumView}}
+    {{/each}}
+  </ul>
+</section>

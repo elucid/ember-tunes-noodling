@@ -1,0 +1,5 @@
+<ol class="tracks">
+  {{#each track in album.tracks}}
+    {{view Tunes.TrackView trackBinding="track"}}
+  {{/each}}
+</ol>

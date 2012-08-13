@@ -1,0 +1,33 @@
+output 'public/assets'
+
+input 'assets/javascripts' do
+
+  match 'app/tunes.js' do
+    concat 'application.js'
+  end
+
+  match '**/*.hbs' do
+    handlebars(
+      :key_name_proc => proc { |input|
+        input.path.sub(%r(^app/templates/), '').sub(/\.hbs$/, '')
+      }
+    )
+    concat 'application.js'
+  end
+
+  match 'vendor/**/*.js' do
+    files = %w(
+      vendor/jquery-1.7.2.min.js
+      vendor/handlebars-1.0.0.beta.6.js
+      vendor/ember-1.0.pre.js
+    )
+    concat files, 'application.js'
+  end
+
+end
+
+input 'assets/stylesheets' do
+  match '**/*.css' do
+    concat 'application.css'
+  end
+end

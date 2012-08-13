@@ -1,0 +1,9 @@
+<nav>
+  {{#unless isPlaying}}
+    <button class="control play" {{action play}}>Play</button>
+  {{else}}
+    <button class="control pause" {{action pause}}>Pause</button>
+  {{/unless}}
+  <button class="control prev" {{action prev}}>Prev</button>
+  <button class="control next" {{action next}}>Next</button>
+</nav>
