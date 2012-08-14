@@ -26,6 +26,14 @@ Tunes = Ember.Application.create();
 Tunes.Router = Em.Router.extend({
   enableLogging: true,
   root: Em.Route.extend({
+    // note: these actions don't make sense until we have queued
+    // tracks, but we don't want to error out if playlist buttons
+    // are pressed at that point.
+    play:  Em.K,
+    pause: Em.K,
+    prev:  Em.K,
+    next:  Em.K,
+
     index: Em.Route.extend({
       route: '/',
 
@@ -40,43 +48,74 @@ Tunes.Router = Em.Router.extend({
       },
 
       connectOutlets: function(router) {
-        var controller = router.get('applicationController');
-        controller.connectOutlet('library', 'library');
-        controller.connectOutlet('playlist', 'playlist', []);
-      }
+        var appController = router.get('applicationController');
+        appController.connectOutlet('library', 'library');
+        appController.connectOutlet('playlist', 'playlist', []);
 
+        router.get('playlistController').connectOutlet({
+          outletName: 'navbar',
+          viewClass: Tunes.NavbarView,
+          controller: router.get('audioController')
+        });
+      }
     }),
 
     ready: Em.State.extend({
-      initialState: 'emptyPlaylist',
+      initialState: 'emptyQueue',
 
-      emptyPlaylist: Em.State.extend({
-        // note: these actions don't make sense until we have queued
-        // tracks, but we don't want to error out if playlist buttons
-        // are pressed at that point.
-        play:  Em.K,
-        pause: Em.K,
-        prev:  Em.K,
-        next:  Em.K
-      }),
+      emptyQueue: Em.State.extend(),
 
       tracksQueued: Em.State.extend({
+        initialState: 'paused',
+
         dequeueAlbum: function(router, event) {
           var album = event.context;
           router.get('playlistController').dequeueAlbum(album);
         },
 
         lastAlbumDequeued: function(router) {
-          router.transitionTo('emptyPlaylist');
+          router.transitionTo('emptyQueue');
         },
 
-        // delegate actual work to the playlistController. views could
-        // of course be setup to target that controller directly but
-        // I much prefer having the router manage application-level events
-        play:  function(sm) { sm.get('playlistController').play(); },
-        pause: function(sm) { sm.get('playlistController').pause(); },
-        prev:  function(sm) { sm.get('playlistController').prev(); },
-        next:  function(sm) { sm.get('playlistController').next(); }
+        playing: Em.State.extend({
+          enter: function(sm) {
+            sm.get('audioController').play();
+            sm.set('audioController.isPlaying', true);
+          },
+
+          pause: function(sm) {
+            sm.transitionTo('paused');
+          },
+
+          prev:  function(sm) {
+            sm.get('playlistController').prev();
+            sm.get('audioController').play();
+          },
+
+          next:  function(sm) {
+            sm.get('playlistController').next();
+            sm.get('audioController').play();
+          }
+        }),
+
+        paused: Em.State.extend({
+          enter: function(sm) {
+            sm.get('audioController').pause();
+            sm.set('audioController.isPlaying', false);
+          },
+
+          play:  function(sm) {
+            sm.transitionTo('playing');
+          },
+
+          prev:  function(sm) {
+            sm.get('playlistController').prev();
+          },
+
+          next:  function(sm) {
+            sm.get('playlistController').next();
+          }
+        })
       }),
 
       queueAlbum: function(router, event) {
@@ -139,12 +178,15 @@ Tunes.ApplicationController = Em.Controller.extend();
 
 Tunes.LibraryController = Em.ArrayController.extend();
 
-Tunes.PlaylistController = Em.ArrayController.extend({
+Tunes.AudioController = Em.Controller.extend({
   init: function(){
     var audio = new Audio();
 
     audio.addEventListener('ended', function() {
-      this.next();
+      var router = this.get('controllers');
+      router.send('pause');
+      router.send('next');
+      router.send('play');
     }.bind(this));
 
     this.set('audio', audio);
@@ -152,20 +194,40 @@ Tunes.PlaylistController = Em.ArrayController.extend({
     this._super();
   },
 
-
-  // the following six functions comprise this controller's public interface
-  // and encapsulate changes to internal state so that consistency can be
-  // maintained.
-
   play: function() {
-    this.set('state', 'play');
-    this.get('audio').play();
+    Em.run.next(this, function() {this.get('audio').play();});
   },
 
   pause: function() {
-    this.set('state', 'pause');
     this.get('audio').pause();
   },
+
+  currentTrackChanged: function() {
+    var newUrl = this.get('currentTrack.url');
+    var audio  = this.get('audio');
+
+    // note: we have to do this because observer fires whenever
+    // dependent properties of currentTrack change, not when
+    // the track itself changes.
+    // it might be possible to do this more simply in the future
+    // if/when observers are passed previous/new value arguments
+    if (audio && this.get('_currentTrackSource') !== newUrl) {
+      this.set('_currentTrackSource', newUrl);
+      audio.src = newUrl;
+    }
+  }.observes('currentTrack'),
+
+  currentTrackBinding: 'controllers.playlistController.currentTrack',
+
+  // kind of stupid, but when audio.src is set it automatically prepends
+  // the hostname, and we need to be able to compare the track source later
+  _currentTrackSource: null
+});
+
+Tunes.PlaylistController = Em.ArrayController.extend({
+  // the following four functions comprise this controller's public interface
+  // and encapsulate changes to internal state so that consistency can be
+  // maintained.
 
   prev: function() {
     var length = this.get('tracklist.length');
@@ -197,7 +259,7 @@ Tunes.PlaylistController = Em.ArrayController.extend({
   // being set to undefined
   dequeueAlbum: function(album) {
     if (album === this.get('currentAlbum')) {
-      this.pause();
+      this.get('controllers').send('pause');
     }
 
     // grab current track before the tracklist gets rearranged
@@ -224,7 +286,7 @@ Tunes.PlaylistController = Em.ArrayController.extend({
     Em.endPropertyChanges();
 
     if (Em.empty(albums)) {
-      Tunes.router.send("lastAlbumDequeued");
+      this.get('controllers').send("lastAlbumDequeued");
     }
   },
 
@@ -241,34 +303,8 @@ Tunes.PlaylistController = Em.ArrayController.extend({
     return this.get('currentTrack.album');
   }.property('currentTrack'),
 
-  isPlaying: function() {
-    return this.get('state') === 'play';
-  }.property('state'),
-
-  state: 'pause',
-
 
   // internal properties
-
-  currentTrackChanged: function() {
-    var pathname = function(href) {
-      var l = document.createElement("a");
-      l.href = href;
-      return l.pathname;
-    };
-
-    // note: we have to do this because observer fires whenever
-    // dependent properties of currentTrack change, not when
-    // the track itself changes.
-    // it might be possible to do this more simply in the future
-    // if/when observers are passed previous/new value arguments
-    if (this.get('audio') && pathname(this.get('audio').src) !== this.get('currentTrack.url')) {
-      this.get('audio').src = this.get('currentTrack.url');
-      if (this.get('isPlaying')) {
-        this.play();
-      }
-    }
-  }.observes('currentTrack'),
 
   tracklist: function() {
     return this.get('content').reduce(function(res, album) {
